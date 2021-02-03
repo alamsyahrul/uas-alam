@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Membuat Grafik Rasio Dokter Dengan Data Dari Web API</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0"></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-giJF6kkoqNQ00vy+HMDP7azOuL0xtbfIcaT9wjKHr8RbDVddVHyTfAAsrekwKmP1"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="alert alert-primary" role="alert">
+      <marquee>Grafik Rasio Jumlah Penduduk Per 1 Dokter</marquee>
+    </div>
+    <div class="container-fluid">
+      <center>
+        <b><h3>INFO KESEHATAN MASA KINI</h3></b>
+      </center>
+      <canvas id="canvas-untuk-menggambar-grafik"></canvas>
+
+      <script>
+        function buatDataUntukGrafik(dataPenduduk, dataDokter) {
+          var label = dataPenduduk.nilai_per_wilayah.map(function (satuanData) {
+            return satuanData.wilayah;
+          });
+
+          var jumlahDokter = dataDokter.nilai_per_wilayah.map(function (
+            satuanData
+          ) {
+            return satuanData.nilai_per_tahun[0].nilai;
+          });
+
+          var jumlahPenduduk = dataPenduduk.nilai_per_wilayah.map(function (
+            satuanData
+          ) {
+            return satuanData.nilai_per_tahun[0].nilai;
+          });
+
+          var jumlahPendudukPerDokter = dataPenduduk.nilai_per_wilayah.map(
+            function (satuanData, urutan) {
+              return Math.round(jumlahPenduduk[urutan] / jumlahDokter[urutan]);
+            }
+          );
+
+          var garisIdealWHOPendudukPerDokter = dataPenduduk.nilai_per_wilayah.map(
+            function (satuanData) {
+              return 1000;
+            }
+          );
+
+          var garisIdealBPJSPendudukPerDokter = dataPenduduk.nilai_per_wilayah.map(
+            function (satuanData) {
+              return 5000;
+            }
+          );
+
+          var dataUntukGrafik = {
+            labels: label,
+            datasets: [
+              {
+                label: "Rasio Ideal Penduduk per 1 Dokter - WHO",
+                borderColor: "rgb(0, 0, 0)",
+                borderWidth: 1,
+                yAxisID: "sumbu-y-kanan",
+                data: garisIdealWHOPendudukPerDokter,
+                type: "line",
+              },
+              {
+                label: "Rasio Ideal Penduduk per 1 Dokter - BPJS",
+                borderColor: "rgb(0, 0, 0)",
+                borderWidth: 3,
+                yAxisID: "sumbu-y-kanan",
+                data: garisIdealBPJSPendudukPerDokter,
+                type: "line",
+              },
+              {
+                label: "Jumlah Penduduk",
+                backgroundColor: "rgb(0, 26, 150)",
+                yAxisID: "sumbu-y-kiri",
+                data: jumlahPenduduk,
+              },
+              {
+                label: "Rasio Penduduk per 1 Dokter",
+                yAxisID: "sumbu-y-kanan",
+                backgroundColor: "rgb(150, 64, 64)",
+                data: jumlahPendudukPerDokter,
+              },
+            ],
+          };
+
+          return dataUntukGrafik;
+        }
+
+        function buatGrafik(dataPenduduk, dataDokter) {
+          var elemenCanvas = document.getElementById(
+            "canvas-untuk-menggambar-grafik"
+          );
+          var penggambarCanvas = elemenCanvas.getContext("2d");
+
+          var judulGrafik = "Grafik Rasio Jumlah Penduduk";
+          var dataUntukGrafik = buatDataUntukGrafik(dataPenduduk, dataDokter);
+
+          var konfigurasiChartJS = {
+            type: "bar",
+            data: dataUntukGrafik,
+            options: {
+              responsive: true,
+              title: {
+                display: true,
+                text: judulGrafik,
+              },
+              scales: {
+                yAxes: [
+                  {
+                    type: "linear",
+                    display: true,
+                    position: "left",
+                    ticks: {
+                      min: 0,
+                    },
+                    id: "sumbu-y-kiri",
+                  },
+                  {
+                    type: "linear",
+                    display: true,
+                    position: "right",
+                    ticks: {
+                      min: 0,
+                    },
+                    id: "sumbu-y-kanan",
+                  },
+                ],
+              },
+            },
+          };
+
+          var grafik = new Chart(penggambarCanvas, konfigurasiChartJS);
+        }
+
+        window.onload = function () {
+          var urlDataPenduduk =
+            "https://mechaid.github.io/course-materials/praktikum-web/2020-2021/contoh/json-api-ke-chart/penduduk-jawa-barat-2019.json";
+          var urlDataDokter =
+            "https://mechaid.github.io/course-materials/praktikum-web/2020-2021/contoh/json-api-ke-chart/dokter-jawa-barat-2019.json";
+
+          var dataPenduduk, dataDokter;
+
+          var requestDataPenduduk = new XMLHttpRequest();
+          requestDataPenduduk.open("GET", urlDataPenduduk, true);
+          requestDataPenduduk.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+              dataPenduduk = JSON.parse(this.responseText);
+              if (dataDokter !== undefined) {
+                buatGrafik(dataPenduduk, dataDokter);
+              }
+            }
+          };
+          requestDataPenduduk.send();
+
+          var requestDataDokter = new XMLHttpRequest();
+          requestDataDokter.open("GET", urlDataDokter, true);
+          requestDataDokter.onreadystatechange = function () {
+            if (this.readyState == 4 && this.status == 200) {
+              dataDokter = JSON.parse(this.responseText);
+              if (dataPenduduk !== undefined) {
+                buatGrafik(dataPenduduk, dataDokter);
+              }
+            }
+          };
+          requestDataDokter.send();
+        };
+      </script>
+    </div>
+    <div class="artikel">
+      <h2>Tips Menjaga Kesehatan Dimasa Pandemi</h2>
+      <img src="Tips.png" /><br />
+
+      <p>
+        1. Mencuci tangan Mencuci tangan adalah salah satu cara yang paling
+        efektif untuk mencegah penularan atau penyebaran virus corona karena
+        dengan mencuci tangan kita dapat menjaga kesehatan tubuh. Cuci tangan
+        yang baik diawali dengan membasuh kedua telapak tangan menggunakan air.
+        Lalu sabuni telapak tangan dan gosok seluruh permukaan kulit tangan,
+        minimal selama 20 detik. Kemudian bilas hingga bersih dengan menggunakan
+        air dan keringkan dengan kain bersih.
+      </p>
+      <p>
+        2. Mengatur pola makan dan mengonsumsi makanan yang bergizi Mengatur
+        pola makan sangatlah penting untuk tubuh kita agar tetap sehat. Hal-hal
+        yang harus diperhatikan yaitu makan tepat waktu dan memakan makanan
+        bergizi yang mengandung 4 sehat 5 sempurna, seperti mengkonsumsi
+        karbohidrat yang terdapat pada nasi, susu, kentang, roti, lauk pauk,
+        buah-buahan, dan sayur-sayuran
+      </p>
+      <p>
+        3. Minum vitamin Minum vitamin juga sangat penting untuk meningkatkan
+        kesehatan tubuh kita. Vitamin C berperan untuk meningkatan kesehatan
+        tubuh kita karena bisa mempercepat produksi sel darah putih yang berguna
+        untuk melawan infeksi.
+      </p>
+      <p>
+        4. Mengkonsumsi air yang cukup Mengkonsumsi air yang cukup idealnya
+        setiap hari delapan gelas, karena tubuh kita membutuhkan cairan agar
+        tidak dehidrasi. Apabila tubuh dehidrasi karena kekurangan minum, dapat
+        menghilangkan daya kosentrasi.
+      </p>
+      <p>
+        5. Menjaga kebersihan lingkungan Membersihkan rumah denngan menggunakan
+        diinsfektan untuk membersihkan benda yang disentuh seperti gagang pintu,
+        remote, alat dapur, dan lain-lain.
+      </p>
+    </div>
+  </body>
+</html>
